@@ -20,6 +20,14 @@ func init() {
 	seen = make(map[string]bool)
 }
 
+func AnalyzeDependencies(tfstate *state.TerraformState) (*Node, error) {
+	node := &Node{
+		TFState: tfstate,
+	}
+	analyzeDependencies(node)
+	return node, nil
+}
+
 func Analyze(tfeClient *tfe.Client, organization, workspace string) (*Node, error) {
 	tfstate, err := state.Read(tfeClient, organization, workspace)
 	if err != nil {
@@ -64,4 +72,18 @@ func recurse(currentNode *Node, tfeClient *tfe.Client) error {
 		}
 	}
 	return nil
+}
+
+func analyzeDependencies(currentNode *Node) {
+	for _, resource := range currentNode.TFState.Resources {
+		if resource.Type != TfeStateType {
+			continue
+		}
+		for _, instance := range resource.Instances {
+			currentNode.Dependencies = append(currentNode.Dependencies, &Node{
+				Organization: instance.Attributes.Organization,
+				Workspace:    instance.Attributes.Workspace,
+			})
+		}
+	}
 }

@@ -2,6 +2,12 @@
 
 Analyzes terraform cloud cross-workspace dependencies.
 
+## Problem statement
+
+- dependency graph across workspaces is unclear
+- no visiblity of dependencies
+- unclear ordering of tf runs
+
 ### Usage
 
 You must provide an `TFE_TOKEN` environment variable that contains the [Terraform Cloud API token](https://www.terraform.io/cloud-docs/users-teams-organizations/api-tokens).
@@ -57,3 +63,26 @@ $ tfe-dep json --organization moolen --workspace tdep-test | jq
   ]
 }
 ```
+
+#### Reconciler
+Analyzes the dependencies of a given workspace and creates run triggers from it.
+Note: this is limited to 20 RunTriggers per workspace.
+
+Also: you can not create run trigger loops, tf cloud api prevents that.
+
+#### Orchestrator
+
+The orchestrator component runs a webhook that is notified when a terraform plan
+has happened. It has knowledge of the dependencies of all workspaces and trigger tf runs for dependents.
+
+### Roadmap
+
+- [ ] Orchestrator: When a Workspace has been applied the orchestrator should get
+      notified, analyze the dependencies and trigger a plan/apply run for them.
+  - [ ] webhook component: receive notifications from tf cloud.
+  - [ ] persistent queue / data storage: fault tolerant, consistent. Stores the
+        dependency graph and keeps track of which workspaces have been planned/applied yet.
+  - [ ] config: auto-apply plans or manual approval?
+  - [ ] config: lock/unlock workspaces?
+  - [ ] config: who configures the webhooks? this application itself?
+        see: https://www.terraform.io/cloud-docs/api-docs/notification-configurations
